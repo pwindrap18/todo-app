@@ -2,7 +2,7 @@ Vue.component('navbar',{
     template: `
     <nav class="navbar" role="navigation" aria-label="main navigation">
         <div class="navbar-brand">
-        <a class="navbar-item" href="https://bulma.io">
+        <a class="navbar-item">
             <h1>TODO</h1>
         </a>
     
@@ -15,34 +15,18 @@ Vue.component('navbar',{
     
         <div id="navbarBasicExample" class="navbar-menu">
         <div class="navbar-start">
-            <a class="navbar-item">
-            Home
+            <a class="navbar-item" @click="completedTask">
+            Completed Tasks
             </a>
     
-            <a class="navbar-item">
-            Documentation
+            <a class="navbar-item" @click="incompletedTask">
+            Incompleted Tasks
+            </a>
+
+            <a class="navbar-item" @click="createTask">
+            Create Task
             </a>
     
-            <div class="navbar-item has-dropdown is-hoverable">
-            <a class="navbar-link">
-                More
-            </a>
-    
-            <div class="navbar-dropdown">
-                <a class="navbar-item">
-                About
-                </a>
-                <a class="navbar-item">
-                Jobs
-                </a>
-                <a class="navbar-item">
-                Contact
-                </a>
-                <hr class="navbar-divider">
-                <a class="navbar-item">
-                Report an issue
-                </a>
-            </div>
             </div>
         </div>
     
@@ -60,15 +44,29 @@ Vue.component('navbar',{
         </div>
         </div>
     </nav>
-    `
+    `,
+
+    methods: {
+        completedTask() {
+            this.$emit('status', 'complete')
+        },
+
+        incompletedTask() {
+            this.$emit('status', 'incomplete')
+        },
+
+        createTask() {
+            this.$emit('input-task')
+        }
+    }
 })
 
 Vue.component('todo',{
     template: `
-    <div class="card container">
+    <div class="card container" >
         <header class="card-header">
         <p class="card-header-title">
-            Component
+            {{ todo.name }}
         </p>
         <a href="#" class="card-header-icon" aria-label="more options">
             <span class="icon">
@@ -78,37 +76,123 @@ Vue.component('todo',{
         </header>
         <div class="card-content">
         <div class="content">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus nec iaculis mauris.
-            <a href="#">@bulmaio</a>. <a href="#">#css</a> <a href="#">#responsive</a>
-            <br>
-            <time datetime="2016-1-1">11:09 PM - 1 Jan 2016</time>
+            {{ todo.description }}
         </div>
         </div>
         <footer class="card-footer">
-        <a href="#" class="card-footer-item">Save</a>
+        <a href="#" @click="$emit('complete')" class="card-footer-item" v-show="!todo.complete" >Done</a>
         <a href="#" class="card-footer-item">Edit</a>
-        <a href="#" class="card-footer-item">Delete</a>
+        <a href="#" @click="$emit('delete')"class="card-footer-item">Delete</a>
         </footer>
     </div>
-    `
+    `,
+    props: ['todo'],
+
+
+
 })
 
 Vue.component('todo-list',{
     template: `
-        <todo></todo>
+        <div>
+            <todo v-for="todo in todos" :todo="todo" @delete="deleteTask(todo)" @complete="completeTask(todo)"></todo>            
+        </div>
     `,
+
+
+    props: ['status','task'],
 
     data() {
         return {
-            todo: []
+            todos: [],
         }
     },
+    methods: {
+        deleteTask(task){
+            axios.delete('http://localhost:3000/todo/delete', { data: {id: task._id} })
+            .then(response => this.todos = this.todos.filter(item => item.name !== task.name))
+        },
 
-    mounted() {
-        axios.get('/todo').then(response => console.log(response))
+        completeTask(task){
+            axios.patch(`http://localhost:3000/todo/complete/${task._id}`)
+            .then(response => this.todos = response.data.tasks)
+        }
+    },
+    created() {
+        axios.get('http://localhost:3000/todo/todos?complete=false').then(response => this.todos = response.data.todos)
+        console.log(this.status)
+        console.log(this.task)
+    },
+    watch: {
+        status(newValue) {
+            // jika new Value == 'complete'
+            // query ke database dapetin data semua todo yang complete
+            // di assign ke dalam data todos
+            if (newValue === 'complete') {
+                axios.get('http://localhost:3000/todo/todos?complete=true')
+                .then(response => this.todos = response.data.todos)
+            } else {
+                axios.get('http://localhost:3000/todo/todos?complete=false')
+                .then(response => this.todos = response.data.todos)
+            }
+        },
+
+        task() {
+            axios.get('http://localhost:3000/todo/todos?complete=false')
+            .then(response => this.todos = response.data.todos)
+        }
+    }
+
+})
+
+Vue.component('create-task',{
+    template: `
+        <div>
+            <input class="input" type="text" placeholder="name of your task" v-model="taskName">
+            <textarea class="textarea container" placeholder="task description" v-model="taskDescription"></textarea>
+            <a class="button is-primary" @click="addTask">add</a>
+        </div>
+    `,
+    props: ['task'],
+    data() {
+        return {
+            taskDescription: '',
+            taskName: ''
+        }
+    },
+    methods: {
+        addTask() {
+            axios.post(`http://localhost:3000/todo/create`,{
+                name: this.taskName,
+                description: this.taskDescription
+            })
+            .then((response) => {
+                this.taskName = '',
+                this.taskDescription = ''
+                this.$emit('task-done')
+            })
+        }
     }
 })
 
 new Vue({
-    el: '#app'
+    el: '#app',
+
+    data: {
+        status: '',
+        task: false
+    },
+
+    methods: {
+        changeStatus(status) {
+            this.status = status
+        },
+
+        newTask() {
+            this.task = true
+        },
+        removeTask() {
+            this.task = false
+        }
+    }
 })
