@@ -4,7 +4,8 @@ const mongoose = require('mongoose')
 module.exports = {
     create(req, res) {
         Todo.create({
-                name: req.body.name
+                name: req.body.name,
+                description: req.body.description
             })
             .then((user) => {
                 res.status(200).json({
@@ -41,6 +42,20 @@ module.exports = {
             res.status(200).json({
                 tasks
             })
+        })
+    },
+
+    updateTask(req, res) {
+        console.log(req.body)
+        if (!req.body.description){
+            req.body.description = ''
+        }
+        Todo.findByIdAndUpdate({_id: mongoose.Types.ObjectId(req.params.id)},{
+            name: req.body.name,
+            description: req.body.description
+        })
+        .then((task)=>{
+            res.send(task)
         })
     }
 }

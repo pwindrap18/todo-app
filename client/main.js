@@ -81,7 +81,7 @@ Vue.component('todo',{
         </div>
         <footer class="card-footer">
         <a href="#" @click="$emit('complete')" class="card-footer-item" v-show="!todo.complete" >Done</a>
-        <a href="#" class="card-footer-item">Edit</a>
+        <a href="#" @click="$emit('edit')" class="card-footer-item">Edit</a>
         <a href="#" @click="$emit('delete')"class="card-footer-item">Delete</a>
         </footer>
     </div>
@@ -95,7 +95,7 @@ Vue.component('todo',{
 Vue.component('todo-list',{
     template: `
         <div>
-            <todo v-for="todo in todos" :todo="todo" @delete="deleteTask(todo)" @complete="completeTask(todo)"></todo>            
+            <todo v-if="!taskToUpdate" v-for="todo in todos" :todo="todo" @delete="deleteTask(todo)" @complete="completeTask(todo)" @edit="getTask(todo)"></todo>            
         </div>
     `,
 
@@ -105,6 +105,7 @@ Vue.component('todo-list',{
     data() {
         return {
             todos: [],
+            taskToUpdate: null
         }
     },
     methods: {
@@ -116,12 +117,16 @@ Vue.component('todo-list',{
         completeTask(task){
             axios.patch(`http://localhost:3000/todo/complete/${task._id}`)
             .then(response => this.todos = response.data.tasks)
+        },
+
+        getTask(task){
+            // axios.get(`http://localhost:3000/todo/todos?_id=${task._id}`)
+            // .then(response => this.taskToUpdate = response.data.todos)
+            this.$emit('update', task)
         }
     },
     created() {
         axios.get('http://localhost:3000/todo/todos?complete=false').then(response => this.todos = response.data.todos)
-        console.log(this.status)
-        console.log(this.task)
     },
     watch: {
         status(newValue) {
@@ -175,12 +180,44 @@ Vue.component('create-task',{
     }
 })
 
+Vue.component('edit-task', {
+    template: `
+    <div>
+        <input class="input" type="text" v-model="task.name ">
+        <textarea class="textarea container" v-model="task.description"></textarea>
+        <a class="button is-primary" @click="updateTask">edit</a>
+    </div>
+    `,
+
+    props: ['task'],
+
+    data() {
+        return {
+            
+        }
+    },
+
+    methods: {
+        updateTask() {
+            console.log(this.task.name)
+            axios.put(`http://localhost:3000/todo/update/${this.task._id}`,{
+                name: this.task.name,
+                description: this.task.description
+            })
+            .then((response)=>{
+                this.$emit('done-update')
+            })
+        }
+    }
+})
+
 new Vue({
     el: '#app',
 
     data: {
         status: '',
-        task: false
+        task: false,
+        updateTask: ''
     },
 
     methods: {
@@ -193,6 +230,12 @@ new Vue({
         },
         removeTask() {
             this.task = false
+        },
+        update(task) {
+            this.updateTask = task
+        },
+        done() {
+            this.updateTask = ""
         }
     }
 })
