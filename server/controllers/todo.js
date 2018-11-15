@@ -15,7 +15,7 @@ module.exports = {
     },
 
     getTodos(req, res) {
-        Todo.find(req.query).then((todos) => {
+        Todo.find(req.query).sort({createdAt: -1}).then((todos) => {
             res.status(200).json({
                 todos
             })

@@ -8,8 +8,10 @@ const todoSchema = new Schema({
         type: Boolean,
         default: false
     }
+}, {
+    timestamps: true
 })
 
-const Todo = mongoose.model('Todo',todoSchema)
+const Todo = mongoose.model('Todo', todoSchema)
 
 module.exports = Todo
