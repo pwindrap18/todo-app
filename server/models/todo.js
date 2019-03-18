@@ -7,7 +7,8 @@ const todoSchema = new Schema({
     complete: {
         type: Boolean,
         default: false
-    }
+    },
+    user: String
 }, {
     timestamps: true
 })

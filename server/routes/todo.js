@@ -6,10 +6,11 @@ const {
     completeTask,
     updateTask
 } = require('../controllers/todo')
+const  authenticate = require('../middlewares/authentication')
 
-router.post('/create', create)
+router.post('/create', authenticate, create)
 
-router.get('/todos',getTodos)
+router.get('/todos', authenticate, getTodos)
 
 router.delete('/delete',deleteTask)
 

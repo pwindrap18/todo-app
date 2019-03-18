@@ -10,3 +10,11 @@
     float: right;
 }
 
+.button-container{
+    margin-bottom: 50px;
+}
+
+.errors{
+    color: red
+}
+

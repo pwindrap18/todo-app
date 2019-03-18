@@ -5,7 +5,8 @@ module.exports = {
     create(req, res) {
         Todo.create({
                 name: req.body.name,
-                description: req.body.description
+                description: req.body.description,
+                user: req.decoded.id
             })
             .then((user) => {
                 res.status(200).json({
@@ -15,7 +16,8 @@ module.exports = {
     },
 
     getTodos(req, res) {
-        Todo.find(req.query).sort({createdAt: -1}).then((todos) => {
+        console.log(req.query.complete)
+        Todo.find({user:req.decoded.id,complete:req.query.complete}).sort({createdAt: -1}).then((todos) => {
             res.status(200).json({
                 todos
             })

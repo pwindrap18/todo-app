@@ -33,11 +33,14 @@ Vue.component('navbar', {
         <div class="navbar-end">
             <div class="navbar-item">
             <div class="buttons">
-                <a class="button is-primary" @click="register">
+                <a class="button is-primary" @click="register" v-if="!isLogin">
                 <strong>Sign up</strong>
                 </a>
-                <a class="button is-light">
+                <a class="button is-light" @click="$emit('login')" v-if=!isLogin>
                 Log in
+                </a>
+                <a class="button is-light" @click="$emit('logout')" v-if="isLogin">
+                Log Out
                 </a>
             </div>
             </div>
@@ -45,6 +48,7 @@ Vue.component('navbar', {
         </div>
     </nav>
     `,
+    props: ['isLogin'],
 
     methods: {
         completedTask() {
@@ -122,7 +126,11 @@ Vue.component('todo-list', {
         },
 
         completeTask(task) {
-            axios.patch(`http://localhost:3000/todo/complete/${task._id}`)
+            axios.patch(`http://localhost:3000/todo/complete/${task._id}`,{
+                headers: {
+                    token: localStorage.getItem('token')
+                }
+            })
                 .then(response => this.todos = response.data.tasks)
         },
 
@@ -133,7 +141,11 @@ Vue.component('todo-list', {
         }
     },
     created() {
-        axios.get('http://localhost:3000/todo/todos?complete=false').then(response => this.todos = response.data.todos)
+        axios.get('http://localhost:3000/todo/todos?complete=false',{
+            headers: {
+                token: localStorage.getItem('token')
+            }
+        }).then(response => this.todos = response.data.todos)
     },
     watch: {
         status(newValue) {
@@ -141,16 +153,28 @@ Vue.component('todo-list', {
             // query ke database dapetin data semua todo yang complete
             // di assign ke dalam data todos
             if (newValue === 'complete') {
-                axios.get('http://localhost:3000/todo/todos?complete=true')
+                axios.get('http://localhost:3000/todo/todos?complete=true',{
+                    headers: {
+                        token: localStorage.getItem('token')
+                    }
+                })
                     .then(response => this.todos = response.data.todos)
             } else {
-                axios.get('http://localhost:3000/todo/todos?complete=false')
+                axios.get('http://localhost:3000/todo/todos?complete=false',{
+                    headers: {
+                        token: localStorage.getItem('token')
+                    }
+                })
                     .then(response => this.todos = response.data.todos)
             }
         },
 
         task() {
-            axios.get('http://localhost:3000/todo/todos?complete=false')
+            axios.get('http://localhost:3000/todo/todos?complete=false',{
+                headers: {
+                    token: localStorage.getItem('token')
+                }
+            })
                 .then(response => this.todos = response.data.todos)
         }
     }
@@ -159,10 +183,10 @@ Vue.component('todo-list', {
 
 Vue.component('create-task', {
     template: `
-        <div>
+        <div class="container button-container">
             <input class="input" type="text" placeholder="name of your task" v-model="taskName">
             <textarea class="textarea container" placeholder="task description" v-model="taskDescription"></textarea>
-            <a class="button is-primary" @click="addTask">add</a>
+            <a class="button is-primary create" @click="addTask">add</a>
         </div>
     `,
     props: ['task'],
@@ -176,11 +200,15 @@ Vue.component('create-task', {
         addTask() {
             axios.post(`http://localhost:3000/todo/create`, {
                     name: this.taskName,
-                    description: this.taskDescription
+                    description: this.taskDescription,
+                }, {
+                    headers: {
+                        token: localStorage.getItem('token')
+                    }
                 })
                 .then((response) => {
                     this.taskName = '',
-                        this.taskDescription = ''
+                    this.taskDescription = ''
                     this.$emit('task-done')
                 })
         }
@@ -230,16 +258,19 @@ Vue.component('register', {
       <section class="modal-card-body">
       <div class="field">
         <div class="control">
+            <p class="errors" v-if=(userErrors.name)>{{userErrors.name}}</p>
             <input class="input is-primary" type="text" placeholder="name" v-model="user.name">
         </div>
       </div>
       <div class="field">
         <div class="control">
+        <p class="errors" v-if=(userErrors.email)>{{userErrors.email}}</p>
             <input class="input is-primary" type="email" placeholder="email" v-model="user.email">
         </div>
       </div>
       <div class="field">
         <div class="control">
+        <p class="errors" v-if=(userErrors.password)>{{userErrors.password}}</p>
             <input class="input is-primary" type="password" placeholder="password" v-model="user.password">
         </div>
       </div>
@@ -258,6 +289,11 @@ Vue.component('register', {
                 name : '',
                 email: '',
                 password: ''
+            },
+            userErrors: {
+                email: "",
+                name: "",
+                password: ""
             }
         }
     },
@@ -269,8 +305,92 @@ Vue.component('register', {
                 password: this.user.password
             })
             .then((response)=>{
-                console.log(response.data)
                 this.$emit('close')
+                this.$emit('reg-success')
+            })
+            .catch((err)=>{
+                console.log(err.response.data.message)
+                if (err.response.data.message.email){
+                    if (err.response.data.message.email.kind== "unique") {
+                        this.userErrors.email = 'email is not available'
+                    } 
+                    if (err.response.data.message.email.kind== "user defined") {
+                        this.userErrors.email = 'email address is not valid'
+                    }
+                    if (err.response.data.message.email.kind== "required") {
+                        this.userErrors.email = 'email is required'
+                    }
+                } else if (!err.response.data.message.email) {
+                    this.userErrors.email = ""
+                }
+                if (err.response.data.message.name) {
+                    if (err.response.data.message.name.kind=="required") {
+                        this.userErrors.name = 'name is required'
+                    }
+                } else {
+                    this.userErrors.name = ''
+                }
+                if (err.response.data.message.password){
+                    if (err.response.data.message.password.kind=="minlength"){
+                        this.userErrors.password = 'password must be at least 6 characters'
+                    } else if (err.response.data.message.password.kind=="required"){
+                        this.userErrors.password = 'password is required'
+                    }
+                } else {
+                    this.userErrors.password = ''
+                }
+            })
+        }
+    }
+})
+
+Vue.component('login', {
+    template: `
+    <div class="modal is-active">
+    <div class="modal-background"></div>
+    <div class="modal-card">
+      <header class="modal-card-head">
+        <p class="modal-card-title">Log in</p>
+        <button class="delete" aria-label="close" @click="$emit('close')"></button>
+      </header>
+      <section class="modal-card-body">
+      <div class="field">
+        <div class="control">
+            <input class="input is-primary" type="email" placeholder="email" v-model="user.email">
+        </div>
+      </div>
+      <div class="field">
+        <div class="control">
+            <input class="input is-primary" type="password" placeholder="password" v-model="user.password">
+        </div>
+      </div>
+      </section>
+      <footer class="modal-card-foot">
+        <button class="button is-success" @click="userLogin">Log in</button>
+        <button class="button" @click="$emit('close')">Cancel</button>
+      </footer>
+    </div>
+  </div>
+    `,
+    props: ['register'],
+    data() {
+        return {
+            user: {
+                email: '',
+                password: ''
+            }
+        }
+    },
+    methods: {
+        userLogin() {
+            axios.post(`http://localhost:3000/users/login`,{
+                email: this.user.email,
+                password: this.user.password
+            })
+            .then((response)=>{
+                localStorage.setItem('token',response.data)
+                this.$emit('close')
+                this.$emit('log-in')
             })
             .catch((err)=>{
                 console.log(err.response.data)
@@ -286,12 +406,24 @@ new Vue({
         status: '',
         task: false,
         updateTask: '',
-        register: false
+        register: false,
+        login: false,
+        isLogin: false,
+    },
+
+    created() {
+        let token = localStorage.getItem('token')
+        if (token) {
+            this.isLogin = true
+        } else {
+            this.isLogin = false
+        } 
     },
 
     methods: {
         changeStatus(status) {
             this.status = status
+            this.task = false
         },
 
         newTask() {
@@ -309,8 +441,20 @@ new Vue({
         registerForm() {
             this.register = true
         },
-        // closeReg() {
-        //     this.register = false
-        // }
+        close() {
+            this.register = false
+            this.login = false
+        },
+        regSuccess() {
+            this.login = true
+        },
+        logout() {
+            this.isLogin = false
+            localStorage.removeItem('token')
+            this.id = ''
+        },
+        userLogin() {
+            this.isLogin = true
+        } 
     }
 })

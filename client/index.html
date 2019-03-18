@@ -11,11 +11,12 @@
 </head>
 <body>
     <div id="app">
-        <navbar class="nav" @status="changeStatus" @input-task="newTask" @register="registerForm"></navbar>
-        <create-task v-if="task" @task-done="removeTask"></create-task>
-        <todo-list v-if="!updateTask" @update="update" :status="status" :task="task"></todo-list>
+        <navbar class="nav" :is-login="isLogin"  @logout="logout" @status="changeStatus" @input-task="newTask" @register="registerForm" @login="login = true"></navbar>
+        <create-task v-if="task" @task-done="removeTask" :id="id"></create-task>
+        <todo-list v-if="!updateTask && isLogin" @update="update" :status="status" :task="task"></todo-list>
         <edit-task v-if="updateTask" :task="updateTask" @done-update="done"></edit-task>
-        <register v-if="register" :register="register" @close="register = false"></register>
+        <register v-if="register" :register="register" @close="close" @reg-success="regSuccess"></register>
+        <login v-if="login" :login="login" @close="close" @log-in="userLogin"></login>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
